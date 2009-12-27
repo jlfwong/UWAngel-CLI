@@ -1,0 +1,18 @@
+Run 
+
+./angel.php
+
+or
+
+php angel.php
+
+to start UWAngel-CLI.
+
+Currently supported navigation:
++ Courses
++ Folders
++ File Download
++ Page viewing
+
+Support to Come:
++ Links
