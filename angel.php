@@ -72,6 +72,9 @@ while(1) {
 	
 	// The maximum number of digits requires to display any menu command
 	$numdigs = intval(log10(count($curdir))) + 1;
+	if ($numdigs < 1) {
+		$numdigs = 1;
+	}
 
 	// The format string to display the menu options
 	$format = "%s[%".$numdigs."s|%8s] %s\n";
