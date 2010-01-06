@@ -9,6 +9,7 @@
 * @requires head
 */
 
+require_once("utility.php");
 define("ERR_USERPASS","Invalid Username or Password");
 class AngelAccess {
 	private $username;
@@ -22,11 +23,27 @@ class AngelAccess {
 	 *
 	 * @return none
 	 */
-	public function AngelAccess() {
+	public function __construct() {
 		$this->username = "";
 		$this->password = "";
 		$this->curlHandle = curl_init();
-		curl_setopt($this->curlHandle,CURLOPT_RETURNTRANSFER,1);
+		$this->cookiefile = tempnam(sys_get_temp_dir(),"angel");
+		$options = array(
+			CURLOPT_HEADER          => true,
+			CURLOPT_FOLLOWLOCATION  => true,
+			CURLOPT_COOKIEFILE      => $this->cookiefile,
+			CURLOPT_COOKIEJAR       => $this->cookiefile,
+			CURLOPT_RETURNTRANSFER  => true
+		);
+		curl_setopt_array($this->curlHandle,$options);
+	}	
+	/**
+	* Delete the cookie file, close the curl handler
+	*
+	*/
+	public function __destruct() {
+		curl_close($this->curlHandle);
+		unlink($this->cookiefile);
 	}
 
 	/**
@@ -37,8 +54,11 @@ class AngelAccess {
 	*/
 	public function CurlGet($page) {
 		$url = 'https://uwangel.uwaterloo.ca'.$page;
-		curl_setopt($this->curlHandle,CURLOPT_URL,$url);
-		curl_setopt($this->curlHandle,CURLOPT_POST,false);
+		$options = array(
+			CURLOPT_URL      => $url,
+			CURLOPT_POST     => false
+		);
+		curl_setopt_array($this->curlHandle,$options);
 		return curl_exec($this->curlHandle);
 	}
 
@@ -51,13 +71,12 @@ class AngelAccess {
 	*/
 	public function CurlPost($page,$payload) {
 		$url = 'https://uwangel.uwaterloo.ca'.$page;
-		curl_setopt($this->curlHandle,CURLOPT_URL,$url);
-		curl_setopt($this->curlHandle,CURLOPT_POST,true);
-		curl_setopt($this->curlHandle,CURLOPT_POSTFIELDS,$payload);
-		curl_setopt($this->curlHandle,CURLOPT_HEADER,true);
-		curl_setopt($this->curlHandle,CURLOPT_FOLLOWLOCATION,true);
-		curl_setopt($this->curlHandle,CURLOPT_COOKIEFILE,"cookiefile");
-		curl_setopt($this->curlHandle,CURLOPT_COOKIEJAR, "cookiefile");
+		$options = array(
+			CURLOPT_URL             => $url,
+			CURLOPT_POST            => true,
+			CURLOPT_POSTFIELDS      => $payload,
+		);
+		curl_setopt_array($this->curlHandle,$options);
 		return curl_exec($this->curlHandle);
 	}		
 	
@@ -230,5 +249,7 @@ class AngelAccess {
 		);
 		return $matches[1];
 	}
+
+
 }
 ?>
