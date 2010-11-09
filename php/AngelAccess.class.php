@@ -21,7 +21,6 @@ class AngelAccess {
 	 *
 	 * Initialize the curl handler
 	 *
-	 * @return none
 	 */
 	public function __construct() {
 		$this->username = "";
@@ -44,6 +43,10 @@ class AngelAccess {
 	public function __destruct() {
 		curl_close($this->curlHandle);
 		unlink($this->cookiefile);
+	}
+
+	public function GetUserName() {
+		return $this->username;;
 	}
 
 	/**
@@ -130,7 +133,7 @@ class AngelAccess {
 	/**
 	* Authenticate the user in UWACE
 	*
-	* $return none
+	* @return none
 	*/
 	public function Login() {
 		$pagetext = "";
@@ -250,6 +253,20 @@ class AngelAccess {
 		return $matches[1];
 	}
 
-
+	/**
+	* Retrieves the URL pointed to an item of type "Link"
+	*
+	* @param string $id The id specifying the link
+	* @return string The url of the resource pointed to
+	*/
+	public function GetLink($id) {
+		$url = "/uwangel/section/content/default.asp?WCI=pgDisplay&WCU=CRSCNT&ENTRY_ID=$id";
+		$pagetext = $this->CurlGet($url);
+		preg_match('/title="Current resource" src="([^"]*)"/',
+			$pagetext,
+			$matches
+		);
+		return $matches[1];
+	}
 }
 ?>

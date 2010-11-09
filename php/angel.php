@@ -44,9 +44,21 @@ $cmd->Login();
 $dirstack = array();
 
 // Retrieve the user's course listings
-print "Retrieving courses....\r";
+echo "Retrieving courses....\r";
 array_unshift($dirstack, $cmd->GetClasses());
 system("clear");
+
+if (strlen(`which open`)) {
+	$opener = "open";
+} else if (strlen(`which gnome-open`)) {
+	$opener = "gnome-open";
+} else {
+	$opener = "";
+	echo "NOTE: You have no format-aware file opener.\n";
+	echo "If you're on a linux system, consider getting gnome-open\n";
+}
+
+
 print <<<EOT
 You are now logged in to Angel Access
 All information is in the format
@@ -81,7 +93,7 @@ while(1) {
 
 
 	// Whitespace used to erase status messages
-	print "                                                  \n";
+	echo "                                                  \n";
 	foreach ($curdir as $key => $val) {
 		if (isset($colortype[$val['type']])) {
 			$color = $colortype[$val['type']];
@@ -97,7 +109,7 @@ while(1) {
 		);
 	}
 
-	print "\n";	
+	echo "\n";	
 
 	// Don't let the use go back if they're in the topmost directory
 	if (count($dirstack) > 1) {
@@ -119,25 +131,29 @@ while(1) {
 		if (count($dirstack) > 1) {
 			array_shift($dirstack);
 		} else {
-			print "ERROR - Cannot go back, already at root level.\n";
+			echo "ERROR - Cannot go back, already at root level.\n";
 		}
 	// Check to see if they entered only numbers
 	} else if (preg_match("/[^0-9]/",$selection) == 0) {
 		$selection = intval($selection);
 		if ($selection >= count($curdir)) {
-			print "ERROR - Selection out of bounds. Try a lower number.\n";
+			echo "ERROR - Selection out of bounds. Try a lower number.\n";
 		}
 		$curitem = $curdir[$selection];
+
+		// COURSES
 		if ($curitem['type'] == "Course") {
-			print "Retrieving course content...\r";
+			echo "Retrieving course content...\r";
 			array_unshift($dirstack,$cmd->BrowseClass($curitem['id']));
 			
+		// FOLDERS
 		} else if ($curitem['type'] == "Folder") {
-			print "Retrieving folder contents...\r";
+			echo "Retrieving folder contents...\r";
 			array_unshift($dirstack,$cmd->BrowseFolder($curitem['id']));
 
+		// FILES
 		} else if ($curitem['type'] == "File") {
-			print "Retrieving file location...\r";
+			echo "Retrieving file location...\r";
 			$fileurl = $cmd->GetFileUrl($curitem['id']);
 			
 			// Prompt for a filename to save their selection as
@@ -150,20 +166,71 @@ while(1) {
 			$com = "wget --no-check-certificate -O \"$outname\" \"https://$fileurl\"";
 			system($com);
 
+			do {
+				$open = $cmd->Prompt("Open File? [y/n] ?>");
+				$open = strtolower($open);
+			} while ($open != 'y' && $open != 'n');
+
+			echo "Specify a command to open the file. Use % to substitute the file name.\n";
+			echo "e.g. \"cat %\" will show the readable text contents of the file.\n";
+
+			if ($open == 'y') {
+				if (strlen($opener)) {
+					$com = $cmd->Prompt("Command [Default: $opener %] ?>");
+					if (strlen($com) == 0) {
+						$com = "$opener %";
+					}
+				} else {
+					do {
+						$com = $cmd->Prompt("Command ?>");
+					} while(strlen($com) == 0);
+				}
+				$com = str_replace("%",$outname,$com);
+				echo "Executing: $com\n";
+				system($com);
+			}
+
+		// LINKS
+		} else if ($curitem['type'] == "Link") {
+			echo "Retrieving link URL...\r";
+			$linkurl = $cmd->GetLink($curitem['id']);
+			print "Link url: $linkurl\n";
+			do {
+				$open = $cmd->Prompt("Open Link? [y/n] ?>");
+				$open = strtolower($open);
+			} while ($open != 'y' && $open != 'n');
+
+			if ($open == 'y') {
+				if (strlen($opener)) {
+					$com = $cmd->Prompt("Command [Default: $opener %] ?>");
+					if (strlen($com) == 0) {
+						$com = "$opener %";
+					}
+				} else {
+					do {
+						$com = $cmd->Prompt("Command ?>");
+					} while(strlen($com) == 0);
+				}
+				$com = str_replace("%",$linkurl,$com);
+				echo "Exeucting: $com\n";
+				system($com);
+			}
+
+		// PAGES
 		} else if ($curitem['type'] == "Page") {
-			print "Retrieving page...\r";
+			echo "Retrieving page...\r";
 			$pagetext = $cmd->GetPage($curitem['id']);
-			print "                    ";
+			echo "                    ";
 			print $pagetext;
-			print "--\n";
+			echo "--\n";
 			$cmd->Prompt("Press enter to continue... ",true);
 			system("clear");
 
 		} else {
-			print "ERROR - No protocol for handling item type: {$curitem['type']}\n";
+			echo "ERROR - No protocol for handling item type: {$curitem['type']}\n";
 		}
 	} else {
-		print "ERROR - Unrecognized command: $selection\n";
+		echo "ERROR - Unrecognized command: $selection\n";
 	}
 }
 
