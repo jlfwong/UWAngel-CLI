@@ -1,6 +1,6 @@
 Gem::Specification.new do |s|
   s.name        = 'uwace'
-  s.version     = '1.0.0'
+  s.version     = '1.0.1'
   s.platform    = Gem::Platform::RUBY
   s.authors     = ['Jamie Wong']
   s.summary     = 'Download UWAce'
@@ -11,6 +11,6 @@ Gem::Specification.new do |s|
   s.add_dependency 'mechanize', '>= 1.0.0'
   s.add_dependency 'rainbow', '>= 1.1'
 
-  s.files               =  ['bin/angel']
-  s.executables         =  ['angel'] 
+  s.files               =  ['bin/uwace']
+  s.executables         =  ['uwace'] 
 end
