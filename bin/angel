@@ -5,6 +5,7 @@ require 'net/https'
 require 'highline/import'
 require 'uri'
 require 'fileutils'
+require 'rainbow'
 
 class AngelAccess
   class InvalidLogin < StandardError; end
@@ -103,15 +104,19 @@ class AngelAccess
       if node[:type] == 'file'
 
         download_path = get_download_path node[:url]
+
+        if download_path.nil?
+          puts "%s- %s - Failed (Skipping...)".color(:red) % ["\t" * depth, node[:name]]
+          next
+        end
+       
         basename = File.basename(download_path)
         save_path = File.join(basedir, basename)
 
         print "%s- %s - " % ["\t" * depth, basename]
 
-        if download_path.nil?
-          puts "Failed (Skipping...)"
-        elsif File.exists? save_path
-          puts "Skipping..."
+        if File.exists? save_path
+          puts "Skipping...".color(:yellow)
           next
         else
           print "Saving... "
@@ -124,15 +129,20 @@ class AngelAccess
 
         request = Net::HTTP::Get.new(uri.request_uri)
 
-        response = https.request(request)
+        begin
+          response = https.request(request)
+        rescue
+          puts "Failed.".color(:red)
+          next
+        end
 
         open(save_path,"wb") do |file|
           file.write(response.body)
         end
 
-        puts "Done."
+        puts "Done.".color(:green)
       elsif node[:type] == 'folder'
-        puts "%s+ %s" % ["\t" * depth, node[:name]]
+        puts "%s+ %s".color(:cyan) % ["\t" * depth, node[:name]]
         download_tree(node[:children],File.join(basedir, dir_sanitize(node[:name])),depth+1)
       end
     end
@@ -142,19 +152,18 @@ class AngelAccess
     login
 
     get_course_links.each do |course_link|
-      puts course_link.text
-      puts '='*course_link.text.length
+      puts course_link.text.color(:cyan)
+      puts ('='*course_link.text.length).color(:cyan)
       if (course_link.text.downcase =~ /pdeng/)
-        puts "Skipping PDEng Course..."
+        puts "Skipping PDEng Course...".color(:yellow)
         next
       end
 
       if (course_link.text.downcase =~ /co-op/)
-        puts "Skipping Co-Op Course..."
+        puts "Skipping Co-Op Course...".color(:yellow)
         next
       end
       dir_tree = get_directory_tree(course_link)
-      #print_directory_tree(dir_tree)
 
       download_tree(dir_tree,File.join("uwace_#{@username}",dir_sanitize(course_link.text)))
     end
