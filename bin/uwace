@@ -1,7 +1,6 @@
 #!/usr/bin/env ruby -rubygems
 
 require 'mechanize'
-require 'net/https'
 require 'highline/import'
 require 'uri'
 require 'fileutils'
@@ -52,13 +51,6 @@ class AngelAccess
     li_node.css('div.title a').children.find{|c| c.class == Nokogiri::XML::Text}.content
   end
 
-  def get_download_path(page_url)
-    dl_page = @agent.get((@agent.get page_url).iframes.first.src)
-    dl_page.link_with(:href => /AngelUploads/).href
-  rescue NoMethodError
-    nil
-  end
-
   def dir_sanitize(dirname)
     dirname.gsub(/[^a-zA-Z0-9 _]/,'').strip
   end
@@ -103,44 +95,44 @@ class AngelAccess
     dir_tree.each do |node|
       if node[:type] == 'file'
 
-        download_path = get_download_path node[:url]
+        dl_page = @agent.get(node[:url])
 
-        if download_path.nil?
-          puts "%s- %s - Failed (Skipping...)".color(:red) % ["\t" * depth, node[:name]]
-          next
+        unless dl_page.class == Mechanize::File
+          dl_page = @agent.get(dl_page.iframes.first.src)
         end
-       
-        basename = File.basename(download_path)
-        save_path = File.join(basedir, basename)
 
-        print "%s- %s - " % ["\t" * depth, basename]
+        unless dl_page.class == Mechanize::File
+          dl_link = dl_page.link_with(:href => /AngelUploads/)
+          if dl_link.nil?
+            puts "%s- %s - No download link (Skipping...)".color(:red) % ["\t" * depth, node[:name]]
+            next
+          end
 
-        if File.exists? save_path
-          puts "Skipping...".color(:yellow)
-          next
+          basename = File.basename(dl_link.href)
+          save_path = File.join(basedir,basename)
+
+          if File.exists? save_path
+            puts "%s- %s - Already saved (Skipping...)".color(:yellow) % ["\t" * depth, basename]
+            next
+          else
+            dl_page = dl_link.click
+          end
+        end
+
+        if dl_page.class != Mechanize::File
+          puts "%s- %s - Not a file (Skipping...)" % ["\t" * depth, node[:name]]
         else
-          print "Saving... "
+          basename = File.basename(dl_page.filename)
+          save_path = File.join(basedir,basename)
+
+          if File.exists? save_path
+            puts "%s- %s - Already saved (Skipping...)".color(:yellow) % ["\t" * depth, basename]
+          else
+            dl_page.save_as save_path
+            puts "%s- %s - Saved.".color(:green) % ["\t" * depth, basename]
+          end
         end
 
-        uri = URI.parse("https://uwangel.uwaterloo.ca")
-        https = Net::HTTP.new(uri.host, uri.port)
-        https.use_ssl = true
-        https.verify_mode = OpenSSL::SSL::VERIFY_NONE
-
-        request = Net::HTTP::Get.new(uri.request_uri)
-
-        begin
-          response = https.request(request)
-        rescue
-          puts "Failed.".color(:red)
-          next
-        end
-
-        open(save_path,"wb") do |file|
-          file.write(response.body)
-        end
-
-        puts "Done.".color(:green)
       elsif node[:type] == 'folder'
         puts "%s+ %s".color(:cyan) % ["\t" * depth, node[:name]]
         download_tree(node[:children],File.join(basedir, dir_sanitize(node[:name])),depth+1)
